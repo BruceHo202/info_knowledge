@@ -12,6 +12,8 @@ raw_dir = '/Users/mac/Desktop/articles/'
 
 article_names = []
 
+manual_points = []
+
 def gen_article_list():
     article_list = []
     raw_article_list = []
@@ -28,6 +30,8 @@ def gen_article_list():
             raw_article_list.append(raw_article)
             article_names.append(kind + '/' + file)
             f.close
+    for i in range(len(article_list)):
+        manual_points.append(1.0)
     return article_list, raw_article_list
 
 def get_bag(article_list):
@@ -91,8 +95,8 @@ def get_url_title(name):
 class resultItem:
     def __init__(self, index, name, text):
         self.index = index
-        self.name = name
-        self.head = text[10]
+        
+        
         kind, title, url = get_url_title(name)
         self.kind = kind
         self.title = title
@@ -100,19 +104,21 @@ class resultItem:
         self.text = text
         self.rank = 0
         self.freq = 0
-        self.count = 0
+        self.count = 0 # 这篇文章被命中了多少次
         self.occurence = []
         self.similarity = 0.0
+        self.manual_point = manual_points[index]
     def __str__(self):
         s = "kind: " + self.kind + \
             "\ntitle: " + self.title + \
             "\nurl: " + self.url + \
             "\nfreq: " + str(self.freq) + \
             "\nrank: " + str(self.rank) + \
+            "\npoint: " + str(self.count * self.rank * self.manual_point) + \
             "\nsimilarity: " + str(self.similarity) + \
             "\n"
         for j in self.occurence:
-            s += "> ..." + self.text[max(0, j[0] - 50):j[0] + 50] + "...\n"
+            s += "> ..." + self.text[max(0, j[0] - 30):j[1] + 30] + "...\n"
         return s
 
 def get_similarity(a, b):
@@ -127,40 +133,51 @@ def get_similarity(a, b):
     b_len = math.sqrt(b_len)
     return dot / (a_len * b_len)
 
-#inverse_index[word]: [(index, array[index][i], position_list), ...]
+#inverse_index[word]: [(文章索引, 本词在这篇文章出现的次数, 每次出现的起止位置), ...]
 def get_result(search_str, inverse_index, article_names, article_list, bag, array):
-    temp = []
-    freq = [] # 这个词在多少篇文章出现过
+    word_result = []
+    art_set = []
     word_list = search_str.split(' ')
     for word in word_list:
-        temp.append(inverse_index[word].copy())
-        this_freq = 0
-        if inverse_index[word]:
-            for i in inverse_index[word]:
-                this_freq += 1
-        freq.append(this_freq)
+        word_result.append(inverse_index[word])
+        for i in inverse_index[word]:
+            if i[0] not in art_set:
+                art_set.append(i[0])
+        
+    freq = len(art_set) # 所有关键词出现的不重复的文章数
+    
     result_dict = dict()
-    for index, i in enumerate(temp):
+    for i in word_result: # 一个关键词
         if not i:
             continue
-        for j in i:
-            if j[0] not in result_dict:
-                item = resultItem(j[0], article_names[j[0]], article_list[j[0]])
-                item.count += 1
-                item.freq += j[1] 
-                item.rank += j[1] * 100 / freq[index] # 这个词在这篇文章出现的次数 / 这个词出现的总次数
-                item.occurence.extend(j[2])
-                result_dict[j[0]] = item
+        for info in i: # 遍历该关键词出现的所有文章
+                    # j是三元组(文章索引, 本词在这篇文章出现的次数, 每次出现的起止位置)
+                    # 每篇文章只能进入一次if 后面都是else
+            if info[0] not in result_dict:
+                item = resultItem(info[0], article_names[info[0]], article_list[info[0]])
+                
+                item.count += 1 # 该文章被多少关键词命中
+                item.freq += info[1] # 该文章中关键词出现次数
+                item.rank += info[1] * 100 / freq # 该文章中关键词出现次数 / 所有关键词出现的文章数
+               
+                item.occurence.extend(info[2])
+                result_dict[info[0]] = item
             else:
+                item = result_dict[info[0]]
+
                 item.count += 1
-                item.freq += j[1] 
-                item.rank += j[1] * 100 / freq[index] # 这个词在这篇文章出现的次数 / 这个词出现的总次数
-                item.occurence.extend(j[2])
+                item.freq += info[1]
+                # print(item.freq)
+                item.rank += info[1] * 100 / freq
+                
+                
+                item.occurence.extend(info[2])
+                result_dict[info[0]] = item
     result_list = [i for i in result_dict.values()]
     search_vec = CountVectorizer(vocabulary=bag.get_feature_names()).fit_transform([search_str]).toarray()
     for i in result_list:
         i.similarity = get_similarity(search_vec[0], array[i.index].A[0])
-    result_list.sort(key=lambda x: -x.rank * x.count)
+    result_list.sort(key=lambda x: -x.rank * x.count * x.manual_point)
     return result_list
 
 
@@ -178,6 +195,13 @@ if __name__ == '__main__':
         if search_str == 'q':
             exit(0)
         result = get_result(search_str, inverse_index, article_names, article_list, bag, count)
-        for i in result:
+        for index, i in enumerate(result):
+            print(f'[{index}]:')
             print(i)
+        print('choose the best choice above')
+        result_num = input()
+
+        art_index = result[int(result_num)].index
+        manual_points[art_index] *= 1.1
+
         
