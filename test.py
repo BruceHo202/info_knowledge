@@ -1,179 +1,183 @@
-import bs4, requests, os, datetime, time
+import os
+import re
+import math
 
-root_dir = '/Users/mac/Desktop/articles/'
+from sklearn.feature_extraction.text import CountVectorizer
+from collections import defaultdict
 
-def fetch_URL(url):
-    headers = {
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36',
-    }
-    r = requests.get(url,headers=headers)
-    r.raise_for_status()
-    r.encoding = r.apparent_encoding
-    return r.text
+root_dir = '/Users/mac/Desktop/divided_articles/'
+kind_list = os.listdir(root_dir)
+link_dir = '/Users/mac/Desktop/article_link.txt'
+raw_dir = '/Users/mac/Desktop/articles/'
 
-def getKindList(year, month, day):
-    kind_names = []
-    url = 'http://paper.people.com.cn/rmrb/html/' + year + '-' + month + '/' + day + '/nbs.D110000renmrb_01.htm'
-    html = fetch_URL(url)
-    bsobj = bs4.BeautifulSoup(html,'html.parser')
-    # hi = bsobj.find('div', attrs = {'href': 'pageLink'})
-    # print(bsobj)
-    # a = 1 / 0
-    pageList = bsobj.find('div', attrs = {'class': 'swiper-container'}).find_all('div', attrs = {'class': 'swiper-slide'})
-    kind_linkList = []
-    
-    for page in pageList:
-        link = page.a["href"]
-        raw_name = str(page.a)
-        kind_index = raw_name.index('>') + 1
-        half_name = raw_name[kind_index:]
-        half_index = half_name.index('<')
-        kind_name = half_name[:half_index]
-        kind_names.append(kind_name)
-        kind_dir = root_dir + kind_name
-        if not os.path.exists(kind_dir):
-            os.mkdir(kind_dir)
-        url = 'http://paper.people.com.cn/rmrb/html/'  + year + '-' + month + '/' + day + '/' + link
-        kind_linkList.append(url)
-    return kind_linkList, kind_names
+article_names = []
 
-def getTitleList(year, month, day, pageurl):
-    html = fetch_URL(pageurl)
-    bsobj = bs4.BeautifulSoup(html,'html.parser')
-    titleList = bsobj.find('div', attrs = {'class': 'news'}).ul.find_all('li')
-    # tt = titleList
-    # print(titleList)
-    titles = []
-    titleLinkList = []
-    for title in titleList:
-        tempList = title.find_all('a')
-        for temp in tempList:
-            link = temp['href']
-            if 'nw.D110000renmrb' in link:
-                url = 'http://paper.people.com.cn/rmrb/html/' + year + '-' + month + '/' + day + '/' + link
-                titleLinkList.append(url)
-                raw_title = str(temp)
-                _index = raw_title.index('>') + 1
-                half_title = raw_title[_index:]
-                _index = half_title.index('<')
-                this_title = half_title[:_index]
-                
-                titles.append(this_title)
-                
-                
-    return titleLinkList, titles
+def gen_article_list():
+    article_list = []
+    raw_article_list = []
+    for kind in kind_list:
+        kind_dir = root_dir + kind + '/'
+        file_list = os.listdir(kind_dir)
+        for file in file_list:
+            f = open(kind_dir + file, encoding='utf-8')
+            article = f.read()
+            with open(raw_dir + kind + '/' + file, 'r') as ff:
+                raw_article = ff.read()
+            ff.close
+            article_list.append(article)
+            raw_article_list.append(raw_article)
+            article_names.append(kind + '/' + file)
+            f.close
+    return article_list, raw_article_list
 
-def resolve_html_str(s):
-    _index = s.index('>') + 1
-    half_ans = s[_index:]
-    _index = half_ans.index('<')
-    ans = half_ans[:_index]
-    return ans
+def get_bag(article_list):
+    bag = CountVectorizer(token_pattern='\\b\\w+\\b')
+    count = bag.fit_transform(article_list)
+    return bag, count
 
-def saveContent(titleurl, save_dir):
-    html = fetch_URL(titleurl)
-    bsobj = bs4.BeautifulSoup(html, 'html.parser')
-    article = bsobj.find('div', attrs={'class': 'article'})
+def gen_inverse_index(article_list, bag, array, raw_article_list):
+    result = defaultdict(list)
+    words = bag.get_feature_names() 
+    for index, value in enumerate(article_list):
+        for i, word in enumerate(words):
+            if array[index][i] != 0:
+                position_list = [m.span() for m in re.finditer(r'\b' + word + r'\b', value)]
+                result[word].append((index, array[index][i], position_list))
+    return result
+
+
+def get_url_title(name):
+    _index = name.index('/')
     
-    title3 = article.find('h3')
-    title2 = article.find('h2')
-    title1 = article.find('h1')
+    kind = name[:_index]
     
-    content = ''
-    s1 = resolve_html_str(str(title3))
-    if len(s1) != 0:
-        content = content + s1 + '\n'
-    s2 = resolve_html_str(str(title2))
-    if len(s2) != 0:
-        content = content + s2 + '\n'
-    s3 = resolve_html_str(str(title1))
-    if len(s3) != 0:
-        content = content + s3 + '\n'
+    file_t = name[_index + 1:]
+    _index = file_t.index('.')
+    file = file_t[:_index]
     
-    content_list = article.find('div', attrs={'id': 'ozoom'}).find_all('p')
-    
-    for i in content_list:
-        # tmp = str(i)
-        # _index = tmp.index('>') + 1
-        # temp0 = tmp[_index:]
-        # _index = temp0.index('<')
-        # content += temp0[:_index] + '\n'
-        content = content + resolve_html_str(str(i)) + '\n'
-    with open(save_dir, 'w') as outfile:
-        outfile.write(content)
-    # print(content_list)
-    
-def save_info(kind_names, all_titles, kind_linkList, all_title_linklist, title_dir, artinfo_dir):
-    with open(title_dir, 'w') as fout:
-        for i in range(len(kind_names)):
-            fout.write(kind_names[i])
-            fout.write(' ')
-            fout.write(kind_linkList[i])
-            fout.write('\n')
+    file_num = int(file)
+    with open(link_dir, 'r') as f:
+        s = f.readline()
+        s = s[:-1]
+        cnt = 0
+        while(s != kind and cnt < 124):
+            s = f.readline()
+            s = s[:-1]
+            cnt += 1
         
+        for i in range(0, file_num):
+            s = f.readline()
+            
+        url_title = f.readline()
+        url_title = url_title[:-1]
+        it = re.finditer('http://', url_title)
+        lis = [m.span() for m in it]
+        url = url_title[lis[0][0]:]
+        title = url_title[:lis[0][0]]
+        
+        # if(len(title) == 1):
+        #     print(name)
+        if len(title) == 0 or title == ' ':
+            title = ''
+        elif len(url) == 0 or url == ' ':
+            url = ''
+        else:
+            while(title[len(title) - 1].isspace()):
+                title = title[:-1]
+    f.close
+    return kind, title, url
 
-        # for i in range(len(kind_names)):
-    fout.close
-    # with open(artinfo_dir, 'w') as fout:
-    #     for i in range(len(all_titles)):
-    #         for j in range(len(all_titles[i])):
-    #             fout.write(all_titles[i][j])
-    #             fout.write(' ')
-    #             fout.write(all_title_linklist[i][j])
-    #             fout.write('\n')
-    # fout.close
-    with open(artinfo_dir, 'w') as fout:
-        for i in range(len(all_titles)):
-            fout.write(kind_names[i])
-            fout.write(' ')
-            fout.write(str(len(all_titles[i])))
-            fout.write('\n')
-            for j in range(len(all_titles[i])):
-                fout.write(all_titles[i][j])
-                fout.write(' ')
-                fout.write(all_title_linklist[i][j])
-                fout.write('\n')
-    fout.close
+
+class resultItem:
+    def __init__(self, index, name, text):
+        self.index = index
+        self.name = name
+        self.head = text[10]
+        kind, title, url = get_url_title(name)
+        self.kind = kind
+        self.title = title
+        self.url = url
+        self.text = text
+        self.rank = 0
+        self.freq = 0
+        self.count = 0
+        self.occurence = []
+        self.similarity = 0.0
+    def __str__(self):
+        s = "kind: " + self.kind + \
+            "\ntitle: " + self.title + \
+            "\nurl: " + self.url + \
+            "\nfreq: " + str(self.freq) + \
+            "\nrank: " + str(self.rank) + \
+            "\nsimilarity: " + str(self.similarity) + \
+            "\n"
+        for j in self.occurence:
+            s += "> ..." + self.text[max(0, j[0] - 50):j[0] + 50] + "...\n"
+        return s
+
+def get_similarity(a, b):
+    dot = 0
+    a_len = 0
+    b_len = 0
+    for i in range(len(a)):
+        dot += a[i] * b[i]
+        a_len += a[i] * a[i]
+        b_len += b[i] * b[i]
+    a_len = math.sqrt(a_len)
+    b_len = math.sqrt(b_len)
+    return dot / (a_len * b_len)
+
+#inverse_index[word]: [(index, array[index][i], position_list), ...]
+def get_result(search_str, inverse_index, article_names, article_list, bag, array):
+    temp = []
+    freq = [] # 这个词在多少篇文章出现过
+    word_list = search_str.split(' ')
+    for word in word_list:
+        temp.append(inverse_index[word].copy())
+        this_freq = 0
+        if inverse_index[word]:
+            for i in inverse_index[word]:
+                this_freq += 1
+        freq.append(this_freq)
+    result_dict = dict()
+    for index, i in enumerate(temp):
+        if not i:
+            continue
+        for j in i:
+            if j[0] not in result_dict:
+                item = resultItem(j[0], article_names[j[0]], article_list[j[0]])
+                item.count += 1
+                item.freq += j[1] 
+                item.rank += j[1] * 100 / freq[index] # 这个词在这篇文章出现的次数 / 这个词出现的总次数
+                item.occurence.extend(j[2])
+                result_dict[j[0]] = item
+            else:
+                item.count += 1
+                item.freq += j[1] 
+                item.rank += j[1] * 100 / freq[index] # 这个词在这篇文章出现的次数 / 这个词出现的总次数
+                item.occurence.extend(j[2])
+    result_list = [i for i in result_dict.values()]
+    search_vec = CountVectorizer(vocabulary=bag.get_feature_names()).fit_transform([search_str]).toarray()
+    for i in result_list:
+        i.similarity = get_similarity(search_vec[0], array[i.index].A[0])
+    result_list.sort(key=lambda x: -x.rank * x.count)
+    return result_list
 
 
 if __name__ == '__main__':
-    # ret = fetch_URL('http://paper.people.com.cn/rmrb/html/2021-05/26/nw.D110000renmrb_20210526_1-13.htm')
-    # print(ret)
     
-    year = '2021'
-    month = '04'
-    date = '28'
-    kind_linkList, kind_names = getKindList(year, month, date)
-    # tt_kind_linkList, tt_kindnames = getKindList('2021', '05', '26')
-    # print(kind_names)
-    all_titles = []
-    # print(kind_linkList)
-    all_title_linklist = []
-    print(f'{len(kind_linkList)} kind_linklist  finished')
-    for i in range(len(kind_linkList)):
-        
-        this_title_linkList, this_titles = getTitleList(year, month, date, kind_linkList[i])
-        # tt_title_linkList, tt_titles = getTitleList('2021', '05', '26', tt_kind_linkList[i])
-        # this_title_linkList = this_title_linkList + tt_title_linkList
-        # this_titles = this_titles + tt_titles
 
-        all_title_linklist.append(this_title_linkList)
-        all_titles.append(this_titles)
-        # print(f'{i} finished')
+    article_list, raw_article_list = gen_article_list()
+    bag, count = get_bag(article_list)
     
-    cnt = 0
-    for i in range(len(all_titles)):
-        cnt += len(all_titles[i])
-    print(cnt)
-    # print(all_title_linklist[1][0])
-    for i in range(len(all_title_linklist)):
-        kind_dir = root_dir 
-        for j in range(len(all_title_linklist[i])):
-            this_link = all_title_linklist[i][j]
-            this_dir = root_dir + kind_names[i] + '/' + str(j) + '.txt'
-            
-            saveContent(all_title_linklist[i][j],this_dir)
-    title_dir = root_dir + 'title_link.txt'
-    artinfo_dir = root_dir + 'article_link.txt'
-    save_info(kind_names, all_titles, kind_linkList, all_title_linklist, title_dir, artinfo_dir)
+    inverse_index = gen_inverse_index(article_list, bag, count.toarray(), raw_article_list)
+    
+    while True:
+        print('type string you want to search')
+        search_str = input()
+        if search_str == 'q':
+            exit(0)
+        result = get_result(search_str, inverse_index, article_names, article_list, bag, count)
+        for i in result:
+            print(i)
+        
