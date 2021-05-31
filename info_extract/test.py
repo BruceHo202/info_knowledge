@@ -8,6 +8,7 @@ EAR_Q = 1
 TRAFF = 2
 TERRO = 3
 FOOD = 4
+manual_time = 0
 
 def pattern_match(patterns, text):
     ''' 匹配给定模板，返回匹配列表
@@ -56,7 +57,9 @@ def pattern_cause(type):
         return patterns
     if type == FOOD:
         patterns = []
-        pattern = re.compile('(?<=[。，])(?:.*)[(食物中毒)(呕吐)](?:.*)(?=[。，])')
+        pattern = re.compile('(?<=[。，])(?:.*)食物中毒(?:.*)(?=[。，])')
+        patterns.append(pattern)
+        pattern = re.compile()
         patterns.append(pattern)
         return patterns
 
@@ -78,6 +81,8 @@ def pattern_lose():
     patterns.append(re.compile(r'(\d+(?:\w+)被灼伤)'))
     patterns.append(re.compile(r'(\d+死)'))
     patterns.append(re.compile(r'(\d+伤)'))
+    patterns.append(re.compile(r'[一二三四五六七八九十]+死'))
+    patterns.append(re.compile(r'[一二三四五六七八九十]+伤'))
     patterns.append(re.compile(r'\d+(?:\w*)住院'))
     # patterns = ",".join(str(i) for i in patterns)
     # print(pattern)
@@ -93,7 +98,7 @@ class StanfordNER():
         nlp.close()#运行结束关闭模型否则占用大量内存
 
 
-class oneEvent():
+class EventExtraction():
     ''' 事件提取类
     '''
     def __init__(self, context, nlp):
@@ -121,7 +126,6 @@ class oneEvent():
         print('time: ', self.event['time'])
         print('location: ', self.event['location'])
         print('related organisation: ', self.event['rescue_org'])
-        print('event: ', self.event['events'])
         print('short descrip(cause or level): ', self.event['cause'])
         print('loss: ', self.event['loss'])
         return
@@ -130,7 +134,10 @@ class oneEvent():
         ''' 火灾事件
         '''
         # 提取时间、地点、救援组织
-        self.event['time'] = self.taking_time()[-1]
+        tmp = self.taking_time()
+        tmp_len = len(tmp)
+        index = manual_time % tmp_len
+        self.event['time'] = tmp[index]
         self.event['location'] = self.taking_location()
         self.event['rescue_org'] = self.taking_organization()
         # 匹配事故原因和事故损失
@@ -150,7 +157,10 @@ class oneEvent():
     def ear_q_event(self):
        
         # 提取时间、地点、救援组织
-        self.event['time'] = self.taking_time()[-1]
+        tmp = self.taking_time()
+        tmp_len = len(tmp)
+        index = manual_time % tmp_len
+        self.event['time'] = tmp[index]
         self.event['location'] = self.taking_location()
         self.event['rescue_org'] = self.taking_organization()
         # 匹配事故原因和事故损失
@@ -169,7 +179,10 @@ class oneEvent():
         self.event['loss'] = self.lose
 
     def traff_event(self):
-        self.event['time'] = self.taking_time()[-1]
+        tmp = self.taking_time()
+        tmp_len = len(tmp)
+        index = manual_time % tmp_len
+        self.event['time'] = tmp[index]
         self.event['location'] = self.taking_location()
         self.event['rescue_org'] = self.taking_organization()
         self.cause = pattern_match(pattern_cause(TRAFF), self.news)
@@ -186,7 +199,10 @@ class oneEvent():
         self.event['cause'] = self.cause
         self.event['loss'] = self.lose
     def terro_event(self):
-        self.event['time'] = self.taking_time()[-1]
+        tmp = self.taking_time()
+        tmp_len = len(tmp)
+        index = manual_time % tmp_len
+        self.event['time'] = tmp[index]
         self.event['location'] = self.taking_location()
         self.event['rescue_org'] = self.taking_organization()
         self.cause = pattern_match(pattern_cause(TERRO), self.news)
@@ -203,7 +219,10 @@ class oneEvent():
         self.event['cause'] = self.cause
         self.event['loss'] = self.lose
     def food_event(self):
-        self.event['time'] = self.taking_time()[-1]
+        tmp = self.taking_time()
+        tmp_len = len(tmp)
+        index = manual_time % tmp_len
+        self.event['time'] = tmp[index]
         self.event['location'] = self.taking_location()
         self.event['rescue_org'] = self.taking_organization()
         self.cause = pattern_match(pattern_cause(FOOD), self.news)
@@ -406,12 +425,15 @@ if __name__ == '__main__':
     file_list = os.listdir(text_dir)
     for file in file_list:
         # file_dir = text_dir + '\\'+ file
-        file_dir = text_dir + '\\河南社旗发生交通事故致11人死亡逃逸司机已被控制.txt'
+        file_dir = text_dir + '\\赤峰市境内发生一起特大交通事故致3死2伤.txt'
         with open(file_dir, 'r', encoding='utf-8') as f:
             news = f.read()
         f.close
         nlp = StanfordNER(news)
         print(nlp.ner_result)
-        # a = 1 / 0
-        event = oneEvent(news, nlp)
+        event = EventExtraction(news, nlp)
+        print('enter your evaluation of time choose(0 is satisfied, 1 is unsatisfied)')
+        choice = input()
+        choice_num = int(choice)
+        manual_time += choice_num
         
