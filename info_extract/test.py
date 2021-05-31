@@ -93,7 +93,7 @@ class StanfordNER():
         nlp.close()#运行结束关闭模型否则占用大量内存
 
 
-class EventExtraction():
+class oneEvent():
     ''' 事件提取类
     '''
     def __init__(self, context, nlp):
@@ -413,5 +413,5 @@ if __name__ == '__main__':
         nlp = StanfordNER(news)
         print(nlp.ner_result)
         # a = 1 / 0
-        event = EventExtraction(news, nlp)
+        event = oneEvent(news, nlp)
         
