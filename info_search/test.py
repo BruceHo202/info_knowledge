@@ -106,7 +106,7 @@ class resultItem:
         self.freq = 0
         self.count = 0 # 这篇文章被命中了多少次
         self.occurence = []
-        self.similarity = 0.0
+        self.correlation = 0.0
         self.manual_point = manual_points[index]
     def __str__(self):
         s = "kind: " + self.kind + \
@@ -114,24 +114,26 @@ class resultItem:
             "\nurl: " + self.url + \
             "\nfreq: " + str(self.freq) + \
             "\nrank: " + str(self.rank) + \
-            "\npoint: " + str(self.count * self.rank * self.manual_point) + \
-            "\nsimilarity: " + str(self.similarity) + \
+            "\ncorrelation: " + str(self.correlation) + \
+            "\nmanual_weight: " + str(self.manual_point) + \
+            "\npoint: " + str(self.count * self.rank * self.manual_point * self.correlation) + \
             "\n"
         for j in self.occurence:
             s += "> ..." + self.text[max(0, j[0] - 30):j[1] + 30] + "...\n"
         return s
 
-def get_similarity(a, b):
-    dot = 0
-    a_len = 0
-    b_len = 0
+def calc_correlation(a, b):
+    # 两个向量夹角余弦cos<a, b> = ab / (|a| |b|)
+    mul = 0
+    a_square = 0
+    b_square = 0
     for i in range(len(a)):
-        dot += a[i] * b[i]
-        a_len += a[i] * a[i]
-        b_len += b[i] * b[i]
-    a_len = math.sqrt(a_len)
-    b_len = math.sqrt(b_len)
-    return dot / (a_len * b_len)
+        mul += a[i] * b[i]
+        a_square += a[i] * a[i]
+        b_square += b[i] * b[i]
+    a_len = math.sqrt(a_square)
+    b_len = math.sqrt(b_square)
+    return mul / (a_len * b_len)
 
 #inverse_index[word]: [(文章索引, 本词在这篇文章出现的次数, 每次出现的起止位置), ...]
 def get_result(search_str, inverse_index, article_names, article_list, bag, array):
@@ -176,8 +178,8 @@ def get_result(search_str, inverse_index, article_names, article_list, bag, arra
     result_list = [i for i in result_dict.values()]
     search_vec = CountVectorizer(vocabulary=bag.get_feature_names()).fit_transform([search_str]).toarray()
     for i in result_list:
-        i.similarity = get_similarity(search_vec[0], array[i.index].A[0])
-    result_list.sort(key=lambda x: -x.rank * x.count * x.manual_point)
+        i.correlation = calc_correlation(search_vec[0], array[i.index].A[0])
+    result_list.sort(key=lambda x: -x.rank * x.count * x.manual_point * x.correlation)
     return result_list
 
 
