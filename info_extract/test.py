@@ -56,9 +56,7 @@ def pattern_cause(type):
         return patterns
     if type == FOOD:
         patterns = []
-        pattern = re.compile('(?<=[。，])(?:.*)食物中毒(?:.*)(?=[。，])')
-        patterns.append(pattern)
-        pattern = re.compile()
+        pattern = re.compile('(?<=[。，])(?:.*)[(食物中毒)(呕吐)](?:.*)(?=[。，])')
         patterns.append(pattern)
         return patterns
 
