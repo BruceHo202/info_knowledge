@@ -200,6 +200,8 @@ if __name__ == '__main__':
         for index, i in enumerate(result):
             print(f'[{index}]:')
             print(i)
+        if len(result) == 0:
+            continue
         print('choose the best choice above')
         result_num = input()
 
