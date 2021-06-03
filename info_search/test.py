@@ -119,7 +119,7 @@ class resultItem:
             "\npoint: " + str(self.count * self.rank * self.manual_point * self.correlation) + \
             "\n"
         for j in self.occurence:
-            s += "> ..." + self.text[max(0, j[0] - 30):j[1] + 30] + "...\n"
+            s += "相关信息：" + self.text[max(0, j[0] - 30):j[1] + 30] + "\n"
         return s
 
 def calc_correlation(a, b):
