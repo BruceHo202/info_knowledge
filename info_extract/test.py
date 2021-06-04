@@ -11,8 +11,6 @@ FOOD = 4
 manual_time = 0
 
 def pattern_match(patterns, text):
-    ''' 匹配给定模板，返回匹配列表
-    '''
     result = []
 
     for pattern in patterns:
@@ -22,7 +20,7 @@ def pattern_match(patterns, text):
     return result
 
 
-def pattern_cause(type):
+def pattern_info(type):
     ''' 事故原因提取模板
     '''
     if type == FIRE:
@@ -57,9 +55,7 @@ def pattern_cause(type):
         return patterns
     if type == FOOD:
         patterns = []
-        pattern = re.compile('(?<=[。，])(?:.*)食物中毒(?:.*)(?=[。，])')
-        patterns.append(pattern)
-        pattern = re.compile()
+        pattern = re.compile('(?<=[。，])(?:.*)[(食物中毒)(呕吐)](?:.*)(?=[。，])')
         patterns.append(pattern)
         return patterns
 
@@ -108,7 +104,13 @@ class EventExtraction():
         self.news = context
         self.event = {}
 
-        self.having_event()
+        self.extractEvent()
+        tmp = self.extractTime()
+        tmp_len = len(tmp)
+        index = manual_time % tmp_len
+        self.event['time'] = tmp[index]
+        self.event['location'] = self.extractLoc()
+        self.event['rescue_org'] = self.extractOrg()
         """ 识别触发词 """
         if self.event['trigger'] in settings.FIRE_TRIGGER:
             self.fire_event()
@@ -131,17 +133,15 @@ class EventExtraction():
         return
         
     def fire_event(self):
-        ''' 火灾事件
-        '''
-        # 提取时间、地点、救援组织
-        tmp = self.taking_time()
-        tmp_len = len(tmp)
-        index = manual_time % tmp_len
-        self.event['time'] = tmp[index]
-        self.event['location'] = self.taking_location()
-        self.event['rescue_org'] = self.taking_organization()
-        # 匹配事故原因和事故损失
-        self.cause = pattern_match(pattern_cause(FIRE), self.news)
+        
+        # tmp = self.taking_time()
+        # tmp_len = len(tmp)
+        # index = manual_time % tmp_len
+        # self.event['time'] = tmp[index]
+        # self.event['location'] = self.taking_location()
+        # self.event['rescue_org'] = self.taking_organization()
+        
+        self.cause = pattern_match(pattern_info(FIRE), self.news)
         if len(self.cause) == 0:
             self.cause = "正在进一步调查"
         else:
@@ -156,15 +156,14 @@ class EventExtraction():
         self.event['loss'] = self.lose
     def ear_q_event(self):
        
-        # 提取时间、地点、救援组织
-        tmp = self.taking_time()
-        tmp_len = len(tmp)
-        index = manual_time % tmp_len
-        self.event['time'] = tmp[index]
-        self.event['location'] = self.taking_location()
-        self.event['rescue_org'] = self.taking_organization()
-        # 匹配事故原因和事故损失
-        self.cause = pattern_match(pattern_cause(EAR_Q), self.news)
+        # tmp = self.taking_time()
+        # tmp_len = len(tmp)
+        # index = manual_time % tmp_len
+        # self.event['time'] = tmp[index]
+        # self.event['location'] = self.taking_location()
+        # self.event['rescue_org'] = self.taking_organization()
+        
+        self.cause = pattern_match(pattern_info(EAR_Q), self.news)
         if len(self.cause) == 0:
             self.cause = "未知"
         else:
@@ -179,13 +178,13 @@ class EventExtraction():
         self.event['loss'] = self.lose
 
     def traff_event(self):
-        tmp = self.taking_time()
-        tmp_len = len(tmp)
-        index = manual_time % tmp_len
-        self.event['time'] = tmp[index]
-        self.event['location'] = self.taking_location()
-        self.event['rescue_org'] = self.taking_organization()
-        self.cause = pattern_match(pattern_cause(TRAFF), self.news)
+        # tmp = self.taking_time()
+        # tmp_len = len(tmp)
+        # index = manual_time % tmp_len
+        # self.event['time'] = tmp[index]
+        # self.event['location'] = self.taking_location()
+        # self.event['rescue_org'] = self.taking_organization()
+        self.cause = pattern_match(pattern_info(TRAFF), self.news)
         if len(self.cause) == 0:
             self.cause = "未知"
         else:
@@ -199,13 +198,8 @@ class EventExtraction():
         self.event['cause'] = self.cause
         self.event['loss'] = self.lose
     def terro_event(self):
-        tmp = self.taking_time()
-        tmp_len = len(tmp)
-        index = manual_time % tmp_len
-        self.event['time'] = tmp[index]
-        self.event['location'] = self.taking_location()
-        self.event['rescue_org'] = self.taking_organization()
-        self.cause = pattern_match(pattern_cause(TERRO), self.news)
+        
+        self.cause = pattern_match(pattern_info(TERRO), self.news)
         if len(self.cause) == 0:
             self.cause = "未知"
         else:
@@ -219,13 +213,13 @@ class EventExtraction():
         self.event['cause'] = self.cause
         self.event['loss'] = self.lose
     def food_event(self):
-        tmp = self.taking_time()
-        tmp_len = len(tmp)
-        index = manual_time % tmp_len
-        self.event['time'] = tmp[index]
-        self.event['location'] = self.taking_location()
-        self.event['rescue_org'] = self.taking_organization()
-        self.cause = pattern_match(pattern_cause(FOOD), self.news)
+        # tmp = self.taking_time()
+        # tmp_len = len(tmp)
+        # index = manual_time % tmp_len
+        # self.event['time'] = tmp[index]
+        # self.event['location'] = self.taking_location()
+        # self.event['rescue_org'] = self.taking_organization()
+        self.cause = pattern_match(pattern_info(FOOD), self.news)
         if len(self.cause) == 0:
             self.cause = "未知"
         else:
@@ -238,7 +232,7 @@ class EventExtraction():
             self.lose = ",".join(str(i) for i in self.lose)
         self.event['cause'] = self.cause
         self.event['loss'] = self.lose
-    def having_event(self):
+    def extractEvent(self):
         ''' 获取事件
         '''
         fire_trigger_list = ['森林', '爆燃', '火灾', '起火', '泄漏']
@@ -333,7 +327,7 @@ class EventExtraction():
         self.event['events'] = None
         self.event['trigger'] = None
 
-    def taking_time(self):
+    def extractTime(self):
         ''' 获取时间
         '''
         i = 0
@@ -358,7 +352,7 @@ class EventExtraction():
         return result
 
 
-    def taking_location(self):
+    def extractLoc(self):
         ''' 获取地点
         '''
         i = 0
@@ -390,7 +384,7 @@ class EventExtraction():
         return result
 
 
-    def taking_organization(self):
+    def extractOrg(self):
         ''' 获取组织
         '''
         i = 0
@@ -423,14 +417,27 @@ class EventExtraction():
 if __name__ == '__main__':
     result = {}
     file_list = os.listdir(text_dir)
+    
+    name0 = '埃及发生连环爆炸至少90人死亡.txt'
+    name1 = '餐馆无证经营，合肥70余人中毒.txt'
+    name2 = '福建长乐一家酒吧发生特大火灾17人死亡.txt'
+    name3 = '甘肃天祝发生4.3级地震青海门源震感强烈.txt'
+    name4 = '赤峰市境内发生一起特大交通事故致3死2伤.txt'
+    file_list = []
+    file_list.append(name0)
+    file_list.append(name1)
+    file_list.append(name2)
+    file_list.append(name3)
+    file_list.append(name4)
+
     for file in file_list:
-        # file_dir = text_dir + '\\'+ file
-        file_dir = text_dir + '\\赤峰市境内发生一起特大交通事故致3死2伤.txt'
+        file_dir = text_dir + '\\'+ file
+        # file_dir = text_dir + '\\赤峰市境内发生一起特大交通事故致3死2伤.txt'
         with open(file_dir, 'r', encoding='utf-8') as f:
             news = f.read()
         f.close
         nlp = StanfordNER(news)
-        print(nlp.ner_result)
+        print(file)
         event = EventExtraction(news, nlp)
         print('enter your evaluation of time choose(0 is satisfied, 1 is unsatisfied)')
         choice = input()
