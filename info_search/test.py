@@ -102,24 +102,24 @@ class resultItem:
         self.title = title
         self.url = url
         self.text = text
-        self.rank = 0
-        self.freq = 0
-        self.count = 0 # 这篇文章被命中了多少次
+        self.ratio = 0
+        self.keyword_times = 0
+        self.keyword_num = 0 # 这篇文章被命中了多少次
         self.occurence = []
         self.correlation = 0.0
         self.manual_point = manual_points[index]
     def __str__(self):
-        s = "kind: " + self.kind + \
-            "\ntitle: " + self.title + \
+        s = "种类: " + self.kind + \
+            "\n文章标题: " + self.title + \
             "\nurl: " + self.url + \
-            "\nfreq: " + str(self.freq) + \
-            "\nrank: " + str(self.rank) + \
-            "\ncorrelation: " + str(self.correlation) + \
-            "\nmanual_weight: " + str(self.manual_point) + \
-            "\npoint: " + str(self.count * self.rank * self.manual_point * self.correlation) + \
+            "\n该文章中关键词出现次数: " + str(self.keyword_times) + \
+            "\n关键词次数/结果文章数: " + str(self.ratio) + \
+            "\n匹配度: " + str(self.correlation) + \
+            "\n人工评价权值: " + str(self.manual_point) + \
+            "\n排序得分: " + str(self.keyword_num * self.ratio * self.manual_point * self.correlation) + \
             "\n"
         for j in self.occurence:
-            s += "相关信息：" + self.text[max(0, j[0] - 30):j[1] + 30] + "\n"
+            s += "附近内容: " + self.text[max(0, j[0] - 30):j[1] + 30] + "\n"
         return s
 
 def calc_correlation(a, b):
@@ -153,24 +153,24 @@ def get_result(search_str, inverse_index, article_names, article_list, bag, arra
         if not i:
             continue
         for info in i: # 遍历该关键词出现的所有文章
-                    # j是三元组(文章索引, 本词在这篇文章出现的次数, 每次出现的起止位置)
+                    # info是三元组(文章索引, 本词在这篇文章出现的次数, 每次出现的起止位置)
                     # 每篇文章只能进入一次if 后面都是else
             if info[0] not in result_dict:
                 item = resultItem(info[0], article_names[info[0]], article_list[info[0]])
                 
-                item.count += 1 # 该文章被多少关键词命中
-                item.freq += info[1] # 该文章中关键词出现次数
-                item.rank += info[1] * 100 / freq # 该文章中关键词出现次数 / 所有关键词出现的文章数
+                item.keyword_num += 1 # 该文章被多少关键词命中
+                item.keyword_times += info[1] # 该文章中关键词出现次数
+                item.ratio += info[1] / freq # 该文章中关键词出现次数 / 所有关键词出现的文章数
                
                 item.occurence.extend(info[2])
                 result_dict[info[0]] = item
             else:
                 item = result_dict[info[0]]
 
-                item.count += 1
-                item.freq += info[1]
+                item.keyword_num += 1
+                item.keyword_times += info[1]
                 # print(item.freq)
-                item.rank += info[1] * 100 / freq
+                item.ratio += info[1] / freq
                 
                 
                 item.occurence.extend(info[2])
@@ -179,7 +179,7 @@ def get_result(search_str, inverse_index, article_names, article_list, bag, arra
     search_vec = CountVectorizer(vocabulary=bag.get_feature_names()).fit_transform([search_str]).toarray()
     for i in result_list:
         i.correlation = calc_correlation(search_vec[0], array[i.index].A[0])
-    result_list.sort(key=lambda x: -x.rank * x.count * x.manual_point * x.correlation)
+    result_list.sort(key=lambda x: -x.ratio * x.keyword_num * x.manual_point * x.correlation)
     return result_list
 
 
