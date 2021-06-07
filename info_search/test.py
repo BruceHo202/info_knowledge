@@ -192,7 +192,7 @@ if __name__ == '__main__':
     while True:
         print('type string you want to search')
         key_words = input()
-        if key_words == 'q':
+        if key_words == 'exit':
             exit(0)
         result = get_result(key_words, inverse_index, article_names, article_list, bag, count)
         for index, i in enumerate(result):
