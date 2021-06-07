@@ -136,10 +136,10 @@ def calc_correlation(a, b):
     return mul / (a_len * b_len)
 
 #inverse_index[word]: [(文章索引, 本词在这篇文章出现的次数, 每次出现的起止位置), ...]
-def get_result(search_str, inverse_index, article_names, article_list, bag, array):
+def get_result(keywords, inverse_index, article_names, article_list, bag, array):
     word_result = []
     art_set = []
-    word_list = search_str.split(' ')
+    word_list = keywords.split(' ')
     for word in word_list:
         word_result.append(inverse_index[word])
         for i in inverse_index[word]:
@@ -176,7 +176,7 @@ def get_result(search_str, inverse_index, article_names, article_list, bag, arra
                 item.occurence.extend(info[2])
                 result_dict[info[0]] = item
     result_list = [i for i in result_dict.values()]
-    search_vec = CountVectorizer(vocabulary=bag.get_feature_names()).fit_transform([search_str]).toarray()
+    search_vec = CountVectorizer(vocabulary=bag.get_feature_names()).fit_transform([keywords]).toarray()
     for i in result_list:
         i.correlation = calc_correlation(search_vec[0], array[i.index].A[0])
     result_list.sort(key=lambda x: -x.ratio * x.keyword_num * x.manual_point * x.correlation)
@@ -193,10 +193,10 @@ if __name__ == '__main__':
     
     while True:
         print('type string you want to search')
-        search_str = input()
-        if search_str == 'q':
+        key_words = input()
+        if key_words == 'q':
             exit(0)
-        result = get_result(search_str, inverse_index, article_names, article_list, bag, count)
+        result = get_result(key_words, inverse_index, article_names, article_list, bag, count)
         for index, i in enumerate(result):
             print(f'[{index}]:')
             print(i)

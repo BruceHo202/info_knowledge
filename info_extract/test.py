@@ -21,8 +21,6 @@ def pattern_match(patterns, text):
 
 
 def pattern_info(type):
-    ''' 事故原因提取模板
-    '''
     if type == FIRE:
         patterns = []
         key_words = ['起火', '事故', '火灾','爆炸','目前']
@@ -60,8 +58,6 @@ def pattern_info(type):
         return patterns
 
 def pattern_lose():
-    ''' 定义损失模板
-    '''
     patterns = []
 
     key_words = ['伤亡', '损失']
@@ -94,9 +90,7 @@ class StanfordNER():
         nlp.close()#运行结束关闭模型否则占用大量内存
 
 
-class EventExtraction():
-    ''' 事件提取类
-    '''
+class infoExtraction():
     def __init__(self, context, nlp):
         # 初始化事件字典，包含触发词，事件类型
         # 时间，地点，救援组织，事故原因，事故损失
@@ -110,8 +104,8 @@ class EventExtraction():
         index = manual_time % tmp_len
         self.event['time'] = tmp[index]
         self.event['location'] = self.extractLoc()
-        self.event['rescue_org'] = self.extractOrg()
-        """ 识别触发词 """
+        self.event['relatedOrg'] = self.extractOrg()
+        
         if self.event['trigger'] in settings.FIRE_TRIGGER:
             self.fire_event()
         elif self.event['trigger'] in settings.EAR_QUAKE_TRIGGER:
@@ -127,19 +121,12 @@ class EventExtraction():
         print('event: ', self.event['events'])
         print('time: ', self.event['time'])
         print('location: ', self.event['location'])
-        print('related organisation: ', self.event['rescue_org'])
+        print('related organisation: ', self.event['relatedOrg'])
         print('short descrip(cause or level): ', self.event['cause'])
         print('loss: ', self.event['loss'])
         return
         
     def fire_event(self):
-        
-        # tmp = self.taking_time()
-        # tmp_len = len(tmp)
-        # index = manual_time % tmp_len
-        # self.event['time'] = tmp[index]
-        # self.event['location'] = self.taking_location()
-        # self.event['rescue_org'] = self.taking_organization()
         
         self.cause = pattern_match(pattern_info(FIRE), self.news)
         if len(self.cause) == 0:
@@ -156,13 +143,6 @@ class EventExtraction():
         self.event['loss'] = self.lose
     def ear_q_event(self):
        
-        # tmp = self.taking_time()
-        # tmp_len = len(tmp)
-        # index = manual_time % tmp_len
-        # self.event['time'] = tmp[index]
-        # self.event['location'] = self.taking_location()
-        # self.event['rescue_org'] = self.taking_organization()
-        
         self.cause = pattern_match(pattern_info(EAR_Q), self.news)
         if len(self.cause) == 0:
             self.cause = "未知"
@@ -178,12 +158,8 @@ class EventExtraction():
         self.event['loss'] = self.lose
 
     def traff_event(self):
-        # tmp = self.taking_time()
-        # tmp_len = len(tmp)
-        # index = manual_time % tmp_len
-        # self.event['time'] = tmp[index]
-        # self.event['location'] = self.taking_location()
-        # self.event['rescue_org'] = self.taking_organization()
+        
+        
         self.cause = pattern_match(pattern_info(TRAFF), self.news)
         if len(self.cause) == 0:
             self.cause = "未知"
@@ -213,12 +189,8 @@ class EventExtraction():
         self.event['cause'] = self.cause
         self.event['loss'] = self.lose
     def food_event(self):
-        # tmp = self.taking_time()
-        # tmp_len = len(tmp)
-        # index = manual_time % tmp_len
-        # self.event['time'] = tmp[index]
-        # self.event['location'] = self.taking_location()
-        # self.event['rescue_org'] = self.taking_organization()
+        
+        
         self.cause = pattern_match(pattern_info(FOOD), self.news)
         if len(self.cause) == 0:
             self.cause = "未知"
@@ -233,8 +205,6 @@ class EventExtraction():
         self.event['cause'] = self.cause
         self.event['loss'] = self.lose
     def extractEvent(self):
-        ''' 获取事件
-        '''
         fire_trigger_list = ['森林', '爆燃', '火灾', '起火', '泄漏']
         quake_trigger_list = ['地震', '震感', '摇晃']
         traff_trigger_list = ['车', '中巴', '水泥罐车', '辆', '相撞', '撞上', '开车', '交通事故']
@@ -309,27 +279,11 @@ class EventExtraction():
             self.event['trigger'] = trigger
             self.event['events'] = settings.FOOD_TRIGGER[trigger]
             return 
-            # if item[0] == '爆炸' or item[0] == '森林' or item[0] == '爆燃' or item[0] == '火灾' or item[0] == '起火' or item[0] == '中毒' or item[0] == '泄漏':
-                
-            #     if item[0] in settings.FIRE_TRIGGER:
-            #         self.event['trigger'] = item[0]
-            #         self.event['events'] = settings.FIRE_TRIGGER[item[0]]
-            #         return
-            # if item[0] == '地震' or item[0] == '震感' or item[0] == '摇晃':
-                
-            #     if item[0] in settings.EAR_QUAKE_TRIGGER:
-            #         self.event['trigger'] = item[0]
-            #         self.event['events'] = settings.EAR_QUAKE_TRIGGER[item[0]]
-            #         return
             
-
-        # 未发现触发词
         self.event['events'] = None
         self.event['trigger'] = None
 
     def extractTime(self):
-        ''' 获取时间
-        '''
         i = 0
         state = False
         time_fire = ""
@@ -438,7 +392,7 @@ if __name__ == '__main__':
         f.close
         nlp = StanfordNER(news)
         print(file)
-        event = EventExtraction(news, nlp)
+        event = infoExtraction(news, nlp)
         print('enter your evaluation of time choose(0 is satisfied, 1 is unsatisfied)')
         choice = input()
         choice_num = int(choice)
