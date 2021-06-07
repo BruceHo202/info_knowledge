@@ -79,8 +79,6 @@ def get_url_title(name):
         url = url_title[lis[0][0]:]
         title = url_title[:lis[0][0]]
         
-        # if(len(title) == 1):
-        #     print(name)
         if len(title) == 0 or title == ' ':
             title = ''
         elif len(url) == 0 or url == ' ':
@@ -201,6 +199,7 @@ if __name__ == '__main__':
             print(f'[{index}]:')
             print(i)
         if len(result) == 0:
+            print(f"-----no result for keyword \"{key_words}\"")
             continue
         print('choose the best choice above')
         result_num = input()
