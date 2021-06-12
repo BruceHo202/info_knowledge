@@ -138,7 +138,7 @@ if __name__ == '__main__':
     cnt = 0
     for i in range(len(all_titles)):
         cnt += len(all_titles[i])
-    print(cnt)
+    print(f'file count: {cnt}')
     for i in range(len(all_title_linklist)):
         kind_dir = root_dir 
         for j in range(len(all_title_linklist[i])):

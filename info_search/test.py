@@ -34,7 +34,7 @@ def gen_article_list():
         manual_points.append(1.0)
     return article_list, raw_article_list
 
-def get_bag(article_list):
+def gen_vector(article_list):
     bag = CountVectorizer(token_pattern='\\b\\w+\\b')
     count = bag.fit_transform(article_list)
     return bag, count
@@ -45,7 +45,7 @@ def gen_inverse_index(article_list, bag, array, raw_article_list):
     for index, value in enumerate(article_list):
         for i, word in enumerate(words):
             if array[index][i] != 0:
-                position_list = [m.span() for m in re.finditer(r'\b' + word + r'\b', value)]
+                position_list = [m.span() for m in re.finditer('\\b' + word + '\\b', value)]
                 result[word].append((index, array[index][i], position_list))
     return result
 
@@ -93,8 +93,6 @@ def get_url_title(name):
 class resultItem:
     def __init__(self, index, name, text):
         self.index = index
-        
-        
         kind, title, url = get_url_title(name)
         self.kind = kind
         self.title = title
@@ -185,7 +183,7 @@ if __name__ == '__main__':
     
 
     article_list, raw_article_list = gen_article_list()
-    bag, count = get_bag(article_list)
+    bag, count = gen_vector(article_list)
     
     inverse_index = gen_inverse_index(article_list, bag, count.toarray(), raw_article_list)
     

@@ -63,7 +63,6 @@ def pattern_lose():
     key_words = ['伤亡', '损失']
     pattern = re.compile('.*?(未造成.*?(?:{0}))[,.?:;!，。？：；]'.format('|'.join(key_words)))
     patterns.append(pattern)
-
     patterns.append(re.compile(r'(\d+(?:\w+)死亡)'))
     patterns.append(re.compile(r'(\d+(?:\w+)身亡)'))
     patterns.append(re.compile(r'(\d+(?:\w+)受伤)'))
@@ -76,8 +75,6 @@ def pattern_lose():
     patterns.append(re.compile(r'[一二三四五六七八九十]+死'))
     patterns.append(re.compile(r'[一二三四五六七八九十]+伤'))
     patterns.append(re.compile(r'\d+(?:\w*)住院'))
-    # patterns = ",".join(str(i) for i in patterns)
-    # print(pattern)
     return patterns
 
 class StanfordNER():
